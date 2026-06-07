@@ -1,0 +1,342 @@
+// BC Todo Dia — Schema Prisma
+// Fonte única de verdade
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  COMERCIANTE
+  MORADOR
+  TURISTA
+}
+
+enum OfferTarget {
+  TODOS
+  MORADOR
+  TURISTA
+}
+
+enum BusinessStatus {
+  PENDENTE
+  ATIVO
+  SUSPENSO
+}
+
+enum VerificacaoStatus {
+  NAO_SOLICITADA
+  PENDENTE_ADMIN
+  VERIFICADO_GOOGLE  // dono fez OAuth e Google confirmou que é manager
+  VERIFICADO_MANUAL  // admin aprovou manualmente
+  REJEITADO
+}
+
+enum PromocaoStatus {
+  RASCUNHO
+  ATIVA
+  EXPIRADA
+  CANCELADA
+}
+
+enum BusinessCategory {
+  RESTAURANTES
+  BARES_BALADAS
+  LOJAS_MODA
+  BELEZA_ESTETICA
+  HOSPEDAGEM
+  ESPORTES_AVENTURA
+  CULTURA_ARTE
+  SERVICOS_LOCAIS
+}
+
+enum Bairro {
+  CENTRO
+  BARRA_SUL
+  INTERPRAIAS
+  MUNICAO
+  ARQUIPELAGO
+  CANTO_DO_MORCEGO
+  PRAIA_LARANJEIRAS
+  PRAIA_DOS_AMORES
+  PIONEIROS
+  OUTRO
+}
+
+enum MediaType {
+  FOTO
+  VIDEO
+}
+
+// ─── NextAuth ─────────────────────────────────────────────────────────────────
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── Usuário ──────────────────────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          UserRole  @default(TURISTA)
+
+  bairro     Bairro?
+  interests  String?
+
+  consentAcceptedAt DateTime?
+  consentVersion    String?
+  marketingOptIn    Boolean   @default(false)
+
+  // ── Google Business Integration (apenas para COMERCIANTE) ────────────
+  // Tokens do OAuth com escopos: business.manage + youtube.readonly
+  // Em produção: criptografar com AES-256 antes de salvar
+  googleBizAccessToken  String?   // OAuth access token
+  googleBizRefreshToken String?   // OAuth refresh token (longa duração)
+  googleBizExpiresAt    DateTime? // quando o access token expira
+  googleBizEmail        String?   // conta Google usada (@gmail, @empresa)
+  googleBizConnectedAt  DateTime? // quando conectou
+  onboardingCompleto    Boolean   @default(false) // passou pelo wizard de setup
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  accounts   Account[]
+  sessions   Session[]
+  businesses Business[]
+  favorites  Favorite[]
+  reviews    Review[]
+
+  @@index([email])
+  @@index([role])
+}
+
+// ─── Negócio ──────────────────────────────────────────────────────────────────
+
+model Business {
+  id          String           @id @default(cuid())
+  ownerId     String
+  name        String
+  slug        String           @unique
+  category    BusinessCategory
+  bairro      Bairro
+  description String
+  address     String
+  phone       String?
+  whatsapp    String?
+  website     String?
+  instagram   String?          // @handle do Instagram
+  coverUrl    String?          // foto de capa principal
+  logoUrl     String?          // logo do negócio
+  lat         Float?
+  lng         Float?
+  status      BusinessStatus   @default(PENDENTE)
+  hours       String?          // JSON: { "seg": "09:00-18:00", ... }
+
+  // ── Google Places ─────────────────────────────────────────────────
+  googlePlaceId     String?   // Place ID do Google Maps
+  googleRating      Float?    // Nota média no Google (ex: 4.5)
+  googleReviewCount Int?      // Total de avaliações no Google
+  googlePhotosJson  String?   // JSON array de photo_reference strings
+  googleDataSyncAt  DateTime? // Última vez que sincronizamos dados do Google
+
+  // ── Verificação de propriedade ────────────────────────────────────
+  verificacaoStatus  VerificacaoStatus @default(NAO_SOLICITADA)
+  verificacaoMetodo  String?   // "GOOGLE_OAUTH" | "MANUAL"
+  verificadoEm       DateTime?
+  googleOwnerEmail   String?   // Email Google confirmado como owner/manager
+
+  // ── YouTube ───────────────────────────────────────────────────────
+  youtubeChannelId   String?   // Channel ID do YouTube
+  youtubeChannelUrl  String?   // URL do canal (input do usuário)
+  youtubeVideosJson  String?   // JSON array de vídeos sincronizados
+  youtubeDataSyncAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner          User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  medias         BusinessMedia[]
+  menuCategories MenuCategory[]
+  menuItems      MenuItem[]
+  promocoes      Promocao[]
+  favorites      Favorite[]
+  reviews        Review[]
+
+  @@index([category])
+  @@index([bairro])
+  @@index([status])
+  @@index([ownerId])
+  @@index([googlePlaceId])
+  @@index([verificacaoStatus])
+}
+
+// ─── Mídias (fotos e vídeos do restaurante) ───────────────────────────────────
+
+model BusinessMedia {
+  id         String    @id @default(cuid())
+  businessId String
+  url        String
+  type       MediaType @default(FOTO)
+  caption    String?
+  sortOrder  Int       @default(0)
+  isCover    Boolean   @default(false)
+
+  createdAt DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([type])
+}
+
+// ─── Cardápio ─────────────────────────────────────────────────────────────────
+
+model MenuCategory {
+  id         String @id @default(cuid())
+  businessId String
+  name       String  // "Entradas", "Pratos Principais", "Bebidas", "Sobremesas"
+  sortOrder  Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  business Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  items    MenuItem[]
+
+  @@index([businessId])
+}
+
+model MenuItem {
+  id         String  @id @default(cuid())
+  businessId String
+  categoryId String?
+  name       String  // "Camarão ao alho e óleo" — BUSCÁVEL
+  description String?
+  price      Float
+  imageUrl   String?
+  available  Boolean @default(true)
+  // tags: JSON array de palavras-chave para busca ("camarao","frutos do mar","sem gluten")
+  tags       String? @default("[]")
+  sortOrder  Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  business Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  category MenuCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([businessId])
+  @@index([available])
+  @@index([categoryId])
+}
+
+// ─── Promoções ────────────────────────────────────────────────────────────────
+
+model Promocao {
+  id          String         @id @default(cuid())
+  businessId  String
+  title       String         // "50% OFF no camarão toda terça!"
+  description String         // detalhes da promoção
+  discount    String?        // "50% OFF", "R$20 de desconto", "Leve 2 pague 1"
+  target      OfferTarget    @default(TODOS)
+  status      PromocaoStatus @default(RASCUNHO)
+  imageUrl    String?
+  startsAt    DateTime
+  endsAt      DateTime
+
+  // Controle de reativação
+  reativadoEm    DateTime?
+  reativacoesCount Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([status])
+  @@index([target])
+  @@index([endsAt])
+  @@index([startsAt])
+}
+
+// ─── Avaliações ───────────────────────────────────────────────────────────────
+
+model Review {
+  id         String  @id @default(cuid())
+  businessId String
+  userId     String
+  rating     Int     // 1–5 estrelas
+  comment    String? // até 1000 chars; nullable (só estrela sem texto é válido)
+
+  // Rastreabilidade anti-falso testemunho
+  providerUsed String? // "google" | "credentials"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, businessId]) // 1 avaliação por usuário por negócio
+  @@index([businessId])
+  @@index([rating])
+}
+
+// ─── Favoritos ────────────────────────────────────────────────────────────────
+
+model Favorite {
+  id         String   @id @default(cuid())
+  userId     String
+  businessId String
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, businessId])
+  @@index([userId])
+  @@index([businessId])
+}
