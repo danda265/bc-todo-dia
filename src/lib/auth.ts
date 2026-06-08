@@ -14,7 +14,7 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: "/entrar",
-    error: "/entrar",
+    error: "/auth-erro", // página de diagnóstico — mostra erro detalhado
   },
   logger: {
     error(code, metadata) {
