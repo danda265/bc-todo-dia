@@ -7,7 +7,10 @@ import { prisma } from "@/lib/prisma";
 import { UserRole } from "@prisma/client";
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
+  // TESTE: adapter removido para isolar se o OAuthCallback vem do DB ou do fluxo OAuth
+  // Se o login Google funcionar sem adapter → problema é no PrismaAdapter
+  // Se ainda falhar → problema é em cookies/state/PKCE
+  // adapter: PrismaAdapter(prisma),
   session: {
     strategy: "jwt",
     maxAge: 7 * 24 * 60 * 60, // 7 dias
@@ -49,34 +52,15 @@ export const authOptions: NextAuthOptions = {
           GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-            checks: ["state"],
-            allowDangerousEmailAccountLinking: true,
           }),
         ]
       : []),
   ],
   callbacks: {
-    async jwt({ token, user, account }) {
-      // 'user' só existe no primeiro login (credentials ou OAuth)
+    async jwt({ token, user }) {
       if (user) {
-        token.id = user.id;
-        // Credentials já passa role no objeto user (ver authorize())
-        // OAuth: usuário criado com role padrão TURISTA pelo adapter
+        token.id = user.id ?? user.email ?? "";
         token.role = (user as any).role ?? "TURISTA";
-      }
-      // OAuth: buscar role do banco UMA VEZ no primeiro login
-      // (account só está presente no primeiro login, não em refreshes)
-      if (account && account.provider !== "credentials") {
-        try {
-          const dbUser = await prisma.user.findUnique({
-            where: { id: token.id as string },
-            select: { role: true },
-          });
-          if (dbUser) token.role = dbUser.role;
-        } catch (e) {
-          console.error("[JWT] Erro ao buscar role:", e);
-          // Não re-throw: não deixar falha de DB derrubar o login
-        }
       }
       return token;
     },
