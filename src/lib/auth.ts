@@ -65,24 +65,34 @@ export const authOptions: NextAuthOptions = {
           GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-            checks: ["state"], // desabilitar PKCE — cookie de code_verifier falha no Vercel
+            checks: ["state"],
+            allowDangerousEmailAccountLinking: true,
           }),
         ]
       : []),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
+      // 'user' só existe no primeiro login (credentials ou OAuth)
       if (user) {
         token.id = user.id;
-        token.role = (user as any).role;
+        // Credentials já passa role no objeto user (ver authorize())
+        // OAuth: usuário criado com role padrão TURISTA pelo adapter
+        token.role = (user as any).role ?? "TURISTA";
       }
-      // Buscar role atualizada do banco a cada refresh
-      if (token.id) {
-        const dbUser = await prisma.user.findUnique({
-          where: { id: token.id as string },
-          select: { role: true },
-        });
-        if (dbUser) token.role = dbUser.role;
+      // OAuth: buscar role do banco UMA VEZ no primeiro login
+      // (account só está presente no primeiro login, não em refreshes)
+      if (account && account.provider !== "credentials") {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { role: true },
+          });
+          if (dbUser) token.role = dbUser.role;
+        } catch (e) {
+          console.error("[JWT] Erro ao buscar role:", e);
+          // Não re-throw: não deixar falha de DB derrubar o login
+        }
       }
       return token;
     },
