@@ -112,9 +112,9 @@ function EntrarForm() {
             <div>
               <div className="flex justify-between items-center mb-1">
                 <label className="text-xs font-medium text-gray-500">Senha</label>
-                <span className="text-xs text-[#0077B6] hover:underline cursor-pointer">
+                <Link href="/recuperar-senha" className="text-xs text-[#0077B6] hover:underline">
                   Esqueci a senha
-                </span>
+                </Link>
               </div>
               <input
                 type="password"
