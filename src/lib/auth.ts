@@ -14,7 +14,7 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: "/entrar",
-    error: "/entrar",
+    error: "/auth-erro",
   },
   providers: [
     CredentialsProvider({
