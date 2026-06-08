@@ -16,6 +16,22 @@ export const authOptions: NextAuthOptions = {
     signIn: "/entrar",
     error: "/entrar",
   },
+  logger: {
+    error(code, metadata) {
+      console.error("[NEXTAUTH ERROR]", code, JSON.stringify(metadata));
+    },
+    warn(code) {
+      console.warn("[NEXTAUTH WARN]", code);
+    },
+  },
+  events: {
+    async signIn({ user, account, isNewUser }) {
+      console.log("[NEXTAUTH signIn OK]", { userId: user?.id, provider: account?.provider, isNewUser });
+    },
+    async createUser({ user }) {
+      console.log("[NEXTAUTH createUser]", { userId: user?.id, email: user?.email });
+    },
+  },
   providers: [
     CredentialsProvider({
       name: "credentials",
