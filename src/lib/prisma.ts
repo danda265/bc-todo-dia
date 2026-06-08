@@ -1,11 +1,9 @@
 import { PrismaClient } from "@prisma/client";
-import { PrismaNeon } from "@prisma/adapter-neon";
-import { neon } from "@neondatabase/serverless";
+import { PrismaNeonHttp } from "@prisma/adapter-neon";
 
-// Usa HTTP (fetch) ao invés de WebSocket (Pool).
-// WebSocket connections morrem no cold-start serverless do Vercel —
-// o Pool fica stale e a primeira query após inatividade falha.
-// HTTP via neon() é stateless: cada query é um fetch independente.
+// PrismaNeonHttp = HTTP puro (fetch), sem WebSocket, sem pool persistente
+// Ideal para Vercel serverless: cada query é um fetch independente
+// Não precisa do pacote ws nem de configuração de WebSocket
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -15,8 +13,9 @@ function makePrisma() {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) throw new Error("DATABASE_URL não configurada");
 
-  const sql = neon(connectionString);
-  const adapter = new PrismaNeon(sql as any);
+  // PrismaNeonHttp aceita a connection string diretamente
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const adapter = new PrismaNeonHttp(connectionString, {} as any);
 
   return new PrismaClient({
     adapter,

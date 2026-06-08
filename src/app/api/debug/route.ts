@@ -14,8 +14,8 @@ export async function GET() {
       DATABASE_URL: process.env.DATABASE_URL ? "✅ definido" : "❌ AUSENTE",
       GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ? "✅ definido" : "❌ AUSENTE",
       GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET ? "✅ definido" : "❌ AUSENTE",
-      // Mostrar apenas os primeiros caracteres para verificar formato
-      NEXTAUTH_URL_VALUE: process.env.NEXTAUTH_URL?.substring(0, 40) ?? "N/A",
+      NEXTAUTH_URL_VALUE: process.env.NEXTAUTH_URL?.substring(0, 50) ?? "N/A",
+      DATABASE_URL_HOST: process.env.DATABASE_URL?.split("@")[1]?.split("/")[0] ?? "N/A",
     },
   };
 
