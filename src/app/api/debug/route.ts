@@ -21,12 +21,20 @@ export async function GET() {
 
   // Testar conexão com banco
   try {
-    const userCount = await prisma.user.count();
+    const users = await prisma.user.findMany({
+      select: { id: true, email: true, name: true, password: true },
+    });
     const accountCount = await prisma.account.count();
     results.db = {
       status: "✅ conectado",
-      users: userCount,
+      userCount: users.length,
       accounts: accountCount,
+      users: users.map(u => ({
+        id: u.id,
+        email: u.email,
+        name: u.name,
+        hasPassword: !!u.password,
+      })),
     };
   } catch (e: unknown) {
     const error = e as Error;
