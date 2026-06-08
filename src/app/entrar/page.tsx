@@ -95,6 +95,27 @@ function EntrarForm() {
             </div>
           )}
 
+          {/* Google OAuth */}
+          <button
+            type="button"
+            onClick={() => signIn("google", { callbackUrl: callbackUrl || "/" })}
+            className="w-full flex items-center justify-center gap-3 border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors mb-4"
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18">
+              <path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.05-.66-.15-1.18z"/>
+              <path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2.04a4.8 4.8 0 0 1-7.18-2.54H1.83v2.07A8 8 0 0 0 8.98 17z"/>
+              <path fill="#FBBC05" d="M4.5 10.48A4.8 4.8 0 0 1 4.5 7.5V5.43H1.83a8 8 0 0 0 0 7.14z"/>
+              <path fill="#EA4335" d="M8.98 3.58c1.32 0 2.44.45 3.34 1.35l2.5-2.5A8 8 0 0 0 1.83 5.43L4.5 7.5c.67-2 2.5-3.92 4.48-3.92z"/>
+            </svg>
+            Entrar com Google
+          </button>
+
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex-1 h-px bg-gray-200" />
+            <span className="text-xs text-gray-400">ou</span>
+            <div className="flex-1 h-px bg-gray-200" />
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="text-xs font-medium text-gray-500 block mb-1">Email</label>
