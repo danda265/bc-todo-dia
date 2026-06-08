@@ -32,7 +32,13 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className="h-full">
       <body className={`${inter.className} min-h-full flex flex-col antialiased`}>
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <footer className="mt-auto border-t border-gray-100 bg-white py-4 px-4 text-center text-xs text-gray-400">
+            © {new Date().getFullYear()} BC Todo Dia — Desenvolvido por{" "}
+            <span className="font-medium text-gray-500">Anderson Rodrigo Costa</span>
+          </footer>
+        </Providers>
       </body>
     </html>
   );
