@@ -33,6 +33,14 @@ function EntrarForm() {
   useEffect(() => {
     if (errorParam === "CredentialsSignin") {
       setErro("Email ou senha incorretos. Verifique e tente novamente.");
+    } else if (errorParam === "OAuthAccountNotLinked") {
+      setErro("Este email já está cadastrado com outro método. Entre com email e senha.");
+    } else if (errorParam === "OAuthCallback" || errorParam === "OAuthCreateAccount") {
+      setErro(`Erro ao conectar com Google (${errorParam}). Tente novamente.`);
+    } else if (errorParam === "Callback") {
+      setErro("Erro no retorno do Google. Verifique se os cookies estão habilitados.");
+    } else if (errorParam) {
+      setErro(`Erro de autenticação: ${errorParam}`);
     }
     if (cadastroOk) {
       setInfo("✅ Conta criada! Entre com seu email e senha.");
